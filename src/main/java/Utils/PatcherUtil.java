@@ -38,7 +38,7 @@ public final class PatcherUtil {
         return os;
     }
 
-    private static boolean IsPosix() {
+    public static boolean IsPosix() {
         assert os != null;
         return (os == OSType.LINUX || os == OSType.MACOS);
     }
