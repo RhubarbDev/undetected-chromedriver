@@ -5,14 +5,10 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.apache.commons.io.FileUtils;
 
-import javax.management.RuntimeErrorException;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.Buffer;
 import java.nio.file.Files;
@@ -38,9 +34,7 @@ public final class PatcherUtil {
 
     // if something stops working, this might have changed.
     private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
-
-    private static final String zipName = "chromedriver_%";
-    private static final String exeName = "chromedriver%";
+    private static final String zipName = "undetected_chromedriver";
 
     private static OSType DetermineOS(String name) {
         OSType type = OSType.OTHER;
@@ -147,16 +141,21 @@ public final class PatcherUtil {
             throw new RuntimeException(ex.getMessage());
         }
 
-        if (!saveLocation.toFile().isDirectory()) {
+        if (!saveLocation.toFile().exists() || !saveLocation.toFile().isDirectory()) {
             throw new RuntimeException(saveLocation.toString() + " is not a directory.");
         }
 
-        String url = GetURL();
+        File file = null;
 
-        System.out.println("URL: " + url);
+        try {
+            URL url = new URL(GetURL());
+            file = new File(saveLocation.toString(), zipName);
+            FileUtils.copyURLToFile(url, file);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
 
-        // don't return this
-        return saveLocation;
+        return file.toPath();
     }
 
 
