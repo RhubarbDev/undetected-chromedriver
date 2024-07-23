@@ -36,7 +36,7 @@ public final class PatcherUtil {
     private static final OSType os = DetermineOS();
     private static JsonObject jsonObject = null;
 
-    // I might be able to combine these, need to check
+    // if something stops working, this might have changed.
     private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
 
     private static final String zipName = "chromedriver_%";
@@ -132,11 +132,13 @@ public final class PatcherUtil {
     }
 
 
-    // returns true if download succeeded
-    public static boolean DownloadChromeDriver(Path saveLocation) {
+    // returns path of downloaded file.
+    public static Path DownloadChromeDriver() {
         if (jsonObject == null) {
             jsonObject = FetchDriverData();
         }
+
+        Path saveLocation = GeneratePath();
 
         // Check saveLocation exists, if not create it.
         try {
@@ -153,30 +155,8 @@ public final class PatcherUtil {
 
         System.out.println("URL: " + url);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // it would make sense to unzip chromedriver here as well as download, as I can get the zip name easily using regex
-
-        return false;
+        // don't return this
+        return saveLocation;
     }
 
 
