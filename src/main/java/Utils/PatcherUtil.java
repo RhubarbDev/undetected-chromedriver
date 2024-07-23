@@ -37,8 +37,7 @@ public final class PatcherUtil {
     private static JsonObject jsonObject = null;
 
     // I might be able to combine these, need to check
-    private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing";
-    private static final String verPath = "/last-known-good-versions-with-downloads.json";
+    private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
 
     private static final String zipName = "chromedriver_%";
     private static final String exeName = "chromedriver%";
@@ -66,50 +65,38 @@ public final class PatcherUtil {
         return (os == OSType.LINUX || os == OSType.MACOS);
     }
 
-    public static String[] GeneratePatchData() {
+    public static Path GeneratePath() {
         assert os != null;
 
-        /*
-         * 0 = zip
-         * 1 = exe
-         * 2 = dat
-         */
+        String path = null;
 
-        String[] info = new String[3];
-
-        switch(os) {
+        switch (os) {
             case OSType.WINDOWS:
-                info[0] = zipName.replace("%", "win32");
-                info[1] = exeName.replace("%", ".exe");
-                info[2] = "~/appdata/roaming/undetected_chromedriver";
+                path = "~/appdata/roaming/undetected_chromedriver";
                 break;
             case OSType.LINUX:
-                info[0] = zipName.replace("%", "linux64");
-                info[1] = exeName.replace("%", "");
-                info[2] = "~/.local/share/undetected_chromedriver";
+                path = "~/.local/share/undetected_chromedriver";
                 break;
             case OSType.MACOS:
-                info[0] = zipName.replace("%", "mac64");
-                info[1] = exeName.replace("%", "");
-                info[2] = "~/Library/Application Support/undetected_chromedriver";
+                path = "~/Library/Application Support/undetected_chromedriver";
                 break;
             default:
-                info[2] = "~/.undetected_chromedriver";
+                path =  "~/.undetected_chromedriver";
                 break;
         }
 
         if (System.getenv().containsKey("LAMBDA_TASK_ROOT")) {
-            info[2] = "/tmp/undetected_chromedriver";
+            path = "/tmp/undetected_chromedriver";
         }
 
-        return info;
+        return Paths.get(path.replaceFirst("^~", System.getProperty("user.home"))).toAbsolutePath();
     }
 
     private static JsonObject FetchDriverData() {
         StringBuilder builder = new StringBuilder();
 
         try {
-            URL url = new URL(urlRepo + verPath);
+            URL url = new URL(urlRepo);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
 
@@ -125,12 +112,7 @@ public final class PatcherUtil {
         return new Gson().fromJson(builder.toString(), JsonObject.class);
     }
 
-    // returns true if download succeeded
-    public static boolean DownloadChromeDriver() {
-        if (jsonObject == null) {
-            jsonObject = FetchDriverData();
-        }
-
+    private static String GetURL() {
         JsonArray downloads = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").getAsJsonObject("downloads").getAsJsonArray("chrome");
         String url = null;
 
@@ -146,7 +128,45 @@ public final class PatcherUtil {
             throw new RuntimeException("Couldn't match OS to download URL.");
         }
 
+        return url;
+    }
+
+
+    // returns true if download succeeded
+    public static boolean DownloadChromeDriver(Path saveLocation) {
+        if (jsonObject == null) {
+            jsonObject = FetchDriverData();
+        }
+
+        // Check saveLocation exists, if not create it.
+        try {
+            Files.createDirectories(saveLocation);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
+
+        if (!saveLocation.toFile().isDirectory()) {
+            throw new RuntimeException(saveLocation.toString() + " is not a directory.");
+        }
+
+        String url = GetURL();
+
         System.out.println("URL: " + url);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
