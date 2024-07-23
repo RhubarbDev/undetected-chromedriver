@@ -6,6 +6,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.IOFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -14,7 +16,12 @@ import java.nio.Buffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class PatcherUtil {
 
@@ -34,7 +41,8 @@ public final class PatcherUtil {
 
     // if something stops working, this might have changed.
     private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
-    private static final String zipName = "undetected_chromedriver";
+    private static final String zipName = "undetected_chromedriver.zip";
+    private static final String exeName = "undetected_chromedriver";
 
     private static OSType DetermineOS(String name) {
         OSType type = OSType.OTHER;
@@ -147,7 +155,7 @@ public final class PatcherUtil {
 
 
         File file = null;
-        String name = zipName + "_" + FetchReleaseNumber();
+        String name = FetchReleaseNumber() + "_" + zipName;
 
         try {
             URL url = new URL(GetURL());
@@ -155,7 +163,7 @@ public final class PatcherUtil {
 
             /*
              * If a file of the same version already exists, don't download it again.
-             * Need to handle cleanup
+             * when the unzip function has been written, make it check for the executable, as the zip file will be deleted
              */
             if (!file.exists()) {
                 FileUtils.copyURLToFile(url, file);
@@ -198,8 +206,35 @@ public final class PatcherUtil {
         return cdc.toString();
     }
 
+    // this is a bit of a naive approach, it doesn't know if its patched, only if it exists.
     public static boolean ExecutablePatched(Path executable) {
-        File file = new File(String.valueOf(executable)); // why can't I use path :(
+        File file = executable.toFile();
         return file.exists() && file.isFile();
+    }
+
+    public static void CleanupFolder() {
+        File[] files = GeneratePath().toFile().listFiles();
+
+        if (files == null) {
+            System.out.println("Nothing to cleanup (probably).");
+            return;
+        }
+
+        for (File file : files) {
+            System.out.println(file.getName());
+
+            if (file.getName().equalsIgnoreCase(exeName)) continue;
+
+            try {
+                if (file.isDirectory()) {
+                    FileUtils.cleanDirectory(file);
+                    FileUtils.deleteDirectory(file);
+                } else {
+                    FileUtils.delete(file);
+                }
+            } catch (IOException ex) {
+                System.out.println(ex.getMessage());
+            }
+        }
     }
 }
