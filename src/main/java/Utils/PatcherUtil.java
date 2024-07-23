@@ -1,10 +1,18 @@
 package Utils;
 
+import LooseVersion.LooseVersion;
+
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Random;
 
 public final class PatcherUtil {
+
+    private static final char[] asciiLower = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+
+    private static final Random rand = new Random();
 
     public enum OSType {
         WINDOWS,
@@ -81,4 +89,27 @@ public final class PatcherUtil {
 
         return info;
     }
+
+    public LooseVersion FetchReleaseNumber() {
+        return new LooseVersion("123.123.123.123");
+    }
+
+    public static String GenerateCDC() {
+        StringBuilder cdc = new StringBuilder();
+
+        for(int i = 0; i < 27; i++) {
+            cdc.append(asciiLower[rand.nextInt(asciiLower.length)]);
+        }
+
+        return cdc.toString();
+    }
+
+    public static boolean ExecutablePatched(Path executable) {
+        File file = new File(String.valueOf(executable)); // why can't I use path :(
+        return file.exists() && file.isFile();
+    }
+
+
+
+
 }
