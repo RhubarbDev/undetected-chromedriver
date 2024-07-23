@@ -107,7 +107,7 @@ public final class PatcherUtil {
     }
 
     private static String GetURL() {
-        JsonArray downloads = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").getAsJsonObject("downloads").getAsJsonArray("chrome");
+        JsonArray downloads = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").getAsJsonObject("downloads").getAsJsonArray("chromedriver");
         String url = null;
 
         for (JsonElement download : downloads) {
@@ -145,19 +145,27 @@ public final class PatcherUtil {
             throw new RuntimeException(saveLocation.toString() + " is not a directory.");
         }
 
+
         File file = null;
+        String name = zipName + "_" + FetchReleaseNumber();
 
         try {
             URL url = new URL(GetURL());
-            file = new File(saveLocation.toString(), zipName);
-            FileUtils.copyURLToFile(url, file);
+            file = new File(saveLocation.toString(), name);
+
+            /*
+             * If a file of the same version already exists, don't download it again.
+             * Need to handle cleanup
+             */
+            if (!file.exists()) {
+                FileUtils.copyURLToFile(url, file);
+            }
         } catch (Exception ex) {
             throw new RuntimeException(ex.getMessage());
         }
 
         return file.toPath();
     }
-
 
     // pretty sure this isn't needed anymore, see PatcherUtil.DownloadChromeDriver
     public static LooseVersion FetchReleaseNumber() {
@@ -194,8 +202,4 @@ public final class PatcherUtil {
         File file = new File(String.valueOf(executable)); // why can't I use path :(
         return file.exists() && file.isFile();
     }
-
-
-
-
 }
