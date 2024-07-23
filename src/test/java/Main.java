@@ -1,5 +1,6 @@
 import Driver.Patcher;
 import LooseVersion.LooseVersion;
+import Utils.PatcherUtil;
 
 public class Main {
 
@@ -7,10 +8,7 @@ public class Main {
         //System.out.println("Test.");
         //Patcher patcher = new Patcher();
 
-        LooseVersion version = new LooseVersion("123.543.11");
-
-
-        System.out.println(version);
+        PatcherUtil.DownloadChromeDriver();
 
     }
 }

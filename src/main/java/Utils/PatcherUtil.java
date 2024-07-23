@@ -1,8 +1,20 @@
 package Utils;
 
 import LooseVersion.LooseVersion;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
+import javax.management.RuntimeErrorException;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
+import java.nio.Buffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,29 +33,32 @@ public final class PatcherUtil {
         OTHER
     }
 
-    private static OSType os = DetermineOS();
+    private static final OSType os = DetermineOS();
+    private static JsonObject jsonObject = null;
 
-    // I'm pretty sure I'll need to change these
-    private static final String urlRepo = "https://chromedriver.storage.googleapis.com";
+    // I might be able to combine these, need to check
+    private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing";
+    private static final String verPath = "/last-known-good-versions-with-downloads.json";
+
     private static final String zipName = "chromedriver_%";
     private static final String exeName = "chromedriver%";
 
-    public static OSType DetermineOS() {
-        if (os == null) {
-            String osName = System.getProperty("os.name").toLowerCase();
+    private static OSType DetermineOS(String name) {
+        OSType type = OSType.OTHER;
 
-            if (osName.contains("win")) {
-                os = OSType.WINDOWS;
-            } else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
-                os = OSType.LINUX;
-            } else if (osName.contains("mac")) {
-                os = OSType.MACOS;
-            } else {
-                os = OSType.OTHER;
-            }
+        if (name.contains("win")) {
+            type = OSType.WINDOWS;
+        } else if (name.contains("nix") || name.contains("nux") || name.contains("aix")) {
+            type = OSType.LINUX;
+        } else if (name.contains("mac")) {
+            type = OSType.MACOS;
         }
 
-        return os;
+        return type;
+    }
+
+    public static OSType DetermineOS() {
+        return os == null ? DetermineOS(System.getProperty("os.name")) : os;
     }
 
     public static boolean IsPosix() {
@@ -90,8 +105,80 @@ public final class PatcherUtil {
         return info;
     }
 
-    public LooseVersion FetchReleaseNumber() {
-        return new LooseVersion("123.123.123.123");
+    private static JsonObject FetchDriverData() {
+        StringBuilder builder = new StringBuilder();
+
+        try {
+            URL url = new URL(urlRepo + verPath);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
+
+        return new Gson().fromJson(builder.toString(), JsonObject.class);
+    }
+
+    // returns true if download succeeded
+    public static boolean DownloadChromeDriver() {
+        if (jsonObject == null) {
+            jsonObject = FetchDriverData();
+        }
+
+        JsonArray downloads = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").getAsJsonObject("downloads").getAsJsonArray("chrome");
+        String url = null;
+
+        for (JsonElement download : downloads) {
+            JsonObject obj = download.getAsJsonObject();
+            if (DetermineOS(obj.get("platform").getAsString()) == DetermineOS()) {
+                url = obj.get("url").getAsString();
+                break;
+            }
+        }
+
+        if (url == null) {
+            throw new RuntimeException("Couldn't match OS to download URL.");
+        }
+
+        System.out.println("URL: " + url);
+
+
+
+
+
+
+
+        // it would make sense to unzip chromedriver here as well as download, as I can get the zip name easily using regex
+
+        return false;
+    }
+
+
+    // pretty sure this isn't needed anymore, see PatcherUtil.DownloadChromeDriver
+    public static LooseVersion FetchReleaseNumber() {
+        if (jsonObject == null) {
+            jsonObject = FetchDriverData();
+        }
+
+        String ver = null;
+        try {
+            ver = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").get("version").getAsString();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
+
+        // I'm pretty sure this isn't needed, but whatever
+        if (ver == null) {
+            throw new RuntimeException("Couldn't parse version.");
+        }
+
+        return new LooseVersion(ver);
     }
 
     public static String GenerateCDC() {
