@@ -8,6 +8,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -71,7 +72,6 @@ public class Patcher {
     // returns path of downloaded file.
     public Path downloadChromedriver() {
 
-        JsonObject object = PatcherUtil.getJson();
         Path saveLocation = PatcherUtil.generatePath();
 
         // Check saveLocation exists, if not create it.
@@ -90,7 +90,7 @@ public class Patcher {
         String name = version + ".zip";
 
         try {
-            URL url = new URL(PatcherUtil.getURL());
+            URL url = new URI(PatcherUtil.getURL()).toURL();
             file = new File(saveLocation.toString(), name);
 
             /*

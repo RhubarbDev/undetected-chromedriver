@@ -27,19 +27,15 @@ public final class PatcherUtil {
 
     // only fetch the jsonObject once.
     private static JsonObject jsonObject = null;
-
     // if something stops working, this might have changed.
     private static final String jsonEndpoint = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json";
-
-    // TODO: This needs to be tested.
-    private static final String R_QUERY = "powershell -command \"(Get-Command C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe').Version.ToString()\"\n";
-
-    // This one works.
-    private static final String V_QUERY = "google-chrome --version";
 
     public static JsonObject getJson() {
         if (jsonObject == null) {
             jsonObject = fetchJson();
+            if (jsonObject == null) {
+                throw new RuntimeException("Cannot find data for version: " + getInstalledChromeVersion());
+            }
         }
         return jsonObject;
     }
@@ -93,25 +89,24 @@ public final class PatcherUtil {
             URL url = new URI(jsonEndpoint).toURL();
             String data = IOUtils.toString(url, StandardCharsets.UTF_8);
 
-            JsonArray array = JsonParser.parseString(data).getAsJsonArray();
+            JsonArray array = JsonParser.parseString(data).getAsJsonObject().get("versions").getAsJsonArray();
             obj = new JsonObject[array.size()];
             for (int i = 0; i < array.size(); i++) {
                 obj[i] = array.get(i).getAsJsonObject();
             }
         } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
+            throw new RuntimeException(ex.getCause());
         }
 
         LooseVersion chromeVersion = getInstalledChromeVersion();
 
         int low = 0, high = obj.length - 1;
-
         while (low <= high) {
             int mid = low + (high - low) / 2;
 
             LooseVersion objVersion = new LooseVersion(obj[mid].get("version").getAsString());
 
-            if (objVersion.toString() == chromeVersion.toString()) {
+            if (objVersion.equals(chromeVersion)) {
                 return obj[mid];
             }
 
@@ -126,7 +121,7 @@ public final class PatcherUtil {
     }
 
     public static String getURL() {
-        JsonArray downloads = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").getAsJsonObject("downloads").getAsJsonArray("chromedriver");
+        JsonArray downloads = getJson().getAsJsonObject("downloads").getAsJsonArray("chromedriver");
         String url = null;
 
         for (JsonElement download : downloads) {
@@ -183,7 +178,7 @@ public final class PatcherUtil {
             }
             reader.close();
         } catch (Exception ex) {
-            ex.printStackTrace();;
+            ex.printStackTrace();
         }
 
         if (ln == null) {
