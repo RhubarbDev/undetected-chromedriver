@@ -20,10 +20,10 @@ public class Patcher {
     private final LooseVersion driverVersion;
 
     // returns path of downloaded file.
-    public Path DownloadChromeDriver() {
+    public Path downloadChromedriver() {
 
-        JsonObject object = PatcherUtil.GetJson();
-        Path saveLocation = PatcherUtil.GeneratePath();
+        JsonObject object = PatcherUtil.getJson();
+        Path saveLocation = PatcherUtil.generatePath();
 
         // Check saveLocation exists, if not create it.
         try {
@@ -41,7 +41,7 @@ public class Patcher {
         String name = driverVersion + "_" + zipName;
 
         try {
-            URL url = new URL(PatcherUtil.GetURL());
+            URL url = new URL(PatcherUtil.getURL());
             file = new File(saveLocation.toString(), name);
 
             /*
@@ -58,8 +58,8 @@ public class Patcher {
         return file.toPath();
     }
 
-    public void CleanupFolder() {
-        File[] files = PatcherUtil.GeneratePath().toFile().listFiles();
+    public void cleanupFolder() {
+        File[] files = PatcherUtil.generatePath().toFile().listFiles();
 
         if (files == null) {
             System.out.println("Nothing to cleanup (probably).");
@@ -87,7 +87,7 @@ public class Patcher {
     }
 
     public Patcher() {
-        os = PatcherUtil.DetermineOS();
-        driverVersion = PatcherUtil.FetchReleaseNumber();
+        os = PatcherUtil.determineOS();
+        driverVersion = PatcherUtil.fetchReleaseNumber();
     }
 }

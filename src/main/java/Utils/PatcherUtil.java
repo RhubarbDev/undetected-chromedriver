@@ -33,14 +33,14 @@ public final class PatcherUtil {
     // if something stops working, this might have changed.
     private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
 
-    public static JsonObject GetJson() {
+    public static JsonObject getJson() {
         if (jsonObject == null) {
-            jsonObject = FetchDriverData();
+            jsonObject = fetchDriverData();
         }
         return jsonObject;
     }
 
-    private static OSType DetermineOS(String name) {
+    private static OSType determineOS(String name) {
         OSType type = OSType.OTHER;
 
         if (name.contains("win")) {
@@ -54,14 +54,14 @@ public final class PatcherUtil {
         return type;
     }
 
-    public static OSType DetermineOS() {
-        return DetermineOS(System.getProperty("os.name"));
+    public static OSType determineOS() {
+        return determineOS(System.getProperty("os.name"));
     }
 
-    public static Path GeneratePath() {
+    public static Path generatePath() {
         String path = null;
 
-        switch (DetermineOS()) {
+        switch (determineOS()) {
             case OSType.WINDOWS:
                 path = "~/appdata/roaming/undetected_chromedriver";
                 break;
@@ -83,7 +83,7 @@ public final class PatcherUtil {
         return Paths.get(path.replaceFirst("^~", System.getProperty("user.home"))).toAbsolutePath();
     }
 
-    private static JsonObject FetchDriverData() {
+    private static JsonObject fetchDriverData() {
         StringBuilder builder = new StringBuilder();
 
         try {
@@ -103,13 +103,13 @@ public final class PatcherUtil {
         return new Gson().fromJson(builder.toString(), JsonObject.class);
     }
 
-    public static String GetURL() {
+    public static String getURL() {
         JsonArray downloads = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").getAsJsonObject("downloads").getAsJsonArray("chromedriver");
         String url = null;
 
         for (JsonElement download : downloads) {
             JsonObject obj = download.getAsJsonObject();
-            if (DetermineOS(obj.get("platform").getAsString()) == DetermineOS()) {
+            if (determineOS(obj.get("platform").getAsString()) == determineOS()) {
                 url = obj.get("url").getAsString();
                 break;
             }
@@ -123,9 +123,9 @@ public final class PatcherUtil {
     }
 
     // pretty sure this isn't needed anymore, see PatcherUtil.DownloadChromeDriver
-    public static LooseVersion FetchReleaseNumber() {
+    public static LooseVersion fetchReleaseNumber() {
         if (jsonObject == null) {
-            jsonObject = FetchDriverData();
+            jsonObject = fetchDriverData();
         }
 
         String ver = null;
@@ -143,7 +143,7 @@ public final class PatcherUtil {
         return new LooseVersion(ver);
     }
 
-    public static String GenerateCDC() {
+    public static String generateCDC() {
         StringBuilder cdc = new StringBuilder();
 
         for(int i = 0; i < 27; i++) {
@@ -154,7 +154,7 @@ public final class PatcherUtil {
     }
 
     // this is a bit of a naive approach, it doesn't know if its patched, only if it exists.
-    public static boolean ExecutablePatched(Path executable) {
+    public static boolean checkIsPatched(Path executable) {
         File file = executable.toFile();
         return file.exists() && file.isFile();
     }
