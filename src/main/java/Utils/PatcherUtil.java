@@ -1,15 +1,13 @@
 package Utils;
 
 import LooseVersion.LooseVersion;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import org.apache.commons.io.FileUtils;
+import com.google.gson.*;
+import org.apache.commons.io.IOUtils;
+
 import java.io.*;
-import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Random;
@@ -31,11 +29,17 @@ public final class PatcherUtil {
     private static JsonObject jsonObject = null;
 
     // if something stops working, this might have changed.
-    private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
+    private static final String jsonEndpoint = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json";
+
+    // TODO: This needs to be tested.
+    private static final String R_QUERY = "powershell -command \"(Get-Command C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe').Version.ToString()\"\n";
+
+    // This one works.
+    private static final String V_QUERY = "google-chrome --version";
 
     public static JsonObject getJson() {
         if (jsonObject == null) {
-            jsonObject = fetchDriverData();
+            jsonObject = fetchJson();
         }
         return jsonObject;
     }
@@ -83,24 +87,42 @@ public final class PatcherUtil {
         return Paths.get(path.replaceFirst("^~", System.getProperty("user.home"))).toAbsolutePath();
     }
 
-    private static JsonObject fetchDriverData() {
-        StringBuilder builder = new StringBuilder();
-
+    private static JsonObject fetchJson() {
+        JsonObject[] obj;
         try {
-            URL url = new URL(urlRepo);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
+            URL url = new URI(jsonEndpoint).toURL();
+            String data = IOUtils.toString(url, StandardCharsets.UTF_8);
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line);
+            JsonArray array = JsonParser.parseString(data).getAsJsonArray();
+            obj = new JsonObject[array.size()];
+            for (int i = 0; i < array.size(); i++) {
+                obj[i] = array.get(i).getAsJsonObject();
             }
         } catch (Exception ex) {
             throw new RuntimeException(ex.getMessage());
         }
 
-        return new Gson().fromJson(builder.toString(), JsonObject.class);
+        LooseVersion chromeVersion = getInstalledChromeVersion();
+
+        int low = 0, high = obj.length - 1;
+
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+
+            LooseVersion objVersion = new LooseVersion(obj[mid].get("version").getAsString());
+
+            if (objVersion.toString() == chromeVersion.toString()) {
+                return obj[mid];
+            }
+
+            if (objVersion.compareTo(chromeVersion) < 0) {
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        return null;
     }
 
     public static String getURL() {
@@ -122,25 +144,54 @@ public final class PatcherUtil {
         return url;
     }
 
-    // pretty sure this isn't needed anymore, see PatcherUtil.DownloadChromeDriver
-    public static LooseVersion fetchReleaseNumber() {
-        if (jsonObject == null) {
-            jsonObject = fetchDriverData();
+    public static LooseVersion getInstalledChromeVersion() {
+        LooseVersion version = null;
+        String[] command;
+        int index = -1;
+
+
+        // TODO: This needs testing on windows & MacOS
+        switch (determineOS()) {
+            case OSType.WINDOWS:
+                command = new String[] { "cmd", "/c", "reg query \"HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon\" /v version" };
+                index = 1;
+                break;
+            case OSType.MACOS:
+                command = new String[] { "/Application/Google Chrome.app/Contents/MacOS/Google Chrome", "--version" };
+                index = 2;
+                break;
+            case OSType.LINUX:
+                command = new String[] { "/opt/google/chrome/chrome", "--version" };
+                index = 2;
+                break;
+            default:
+                throw new RuntimeException("Couldn't determine OS");
         }
 
-        String ver = null;
+        String ln = null;
+
         try {
-            ver = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").get("version").getAsString();
+            ProcessBuilder builder = new ProcessBuilder(command);
+            builder.directory(new File(System.getProperty("user.home")));
+            Process proc = builder.start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("Google Chrome") || line.contains("version")) {
+                    ln = line;
+                }
+            }
+            reader.close();
         } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
+            ex.printStackTrace();;
         }
 
-        // I'm pretty sure this isn't needed, but whatever
-        if (ver == null) {
-            throw new RuntimeException("Couldn't parse version.");
+        if (ln == null) {
+            throw new RuntimeException("Couldn't find version.");
         }
 
-        return new LooseVersion(ver);
+        String[] items = ln.split(" ");
+        return new LooseVersion(items[index]);
     }
 
     public static String generateCDC() {

@@ -17,15 +17,16 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 
 public class Patcher {
 
     private static final String exeName = "undetected_chromedriver";
 
     private final PatcherUtil.OSType os;
-    private final LooseVersion driverVersion;
+    private final LooseVersion version;
     private final Path saveLocation;
+    public Path test;
+
 
     public Path unzipChromedriver(Path zipFile) {
         String fileBaseName = FilenameUtils.getBaseName(zipFile.getFileName().toString());
@@ -67,8 +68,6 @@ public class Patcher {
         return null;
     }
 
-
-
     // returns path of downloaded file.
     public Path downloadChromedriver() {
 
@@ -88,7 +87,7 @@ public class Patcher {
 
 
         File file = null;
-        String name = driverVersion + ".zip";
+        String name = version + ".zip";
 
         try {
             URL url = new URL(PatcherUtil.getURL());
@@ -116,7 +115,7 @@ public class Patcher {
             return;
         }
 
-        String patchedName = driverVersion + "_" + exeName;
+        String patchedName = version + "_" + exeName;
 
         for (File file : files) {
             try {
@@ -137,7 +136,7 @@ public class Patcher {
     }
 
     private boolean isPatched() {
-        File patchedExe = new File(saveLocation.toFile(), (driverVersion + "_" + exeName + (this.os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")));
+        File patchedExe = new File(saveLocation.toFile(), (version + "_" + exeName + (this.os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")));
 
         if (patchedExe.exists()) {
             return true;
@@ -148,10 +147,10 @@ public class Patcher {
 
     public Patcher() {
         this.os = PatcherUtil.determineOS();
-        this.driverVersion = PatcherUtil.fetchReleaseNumber();
+        this.version = PatcherUtil.getInstalledChromeVersion();
         this.saveLocation = PatcherUtil.generatePath();
         System.out.println("Checking if Executable is patched...");
-        File patchedExe = new File(saveLocation.toFile(), (driverVersion + "_" + exeName));
+        File patchedExe = new File(saveLocation.toFile(), (version + "_" + exeName));
 
         // this doesn't work.
         if (patchedExe.exists()) {
@@ -161,10 +160,16 @@ public class Patcher {
 
         System.out.println("Downloading Chromedriver...");
         Path zipPath = downloadChromedriver();
-        System.out.println("Archive downloaded.");
+        System.out.println("Archive downloaded.\nUnzipping Archive.");
 
-        System.out.println("Unzipping Archive.");
         Path driverPath = unzipChromedriver(zipPath);
-        System.out.println("File Unzipped, driver location: " + driverPath);
+
+        if (driverPath == null) {
+            throw new RuntimeException("Couldn't find Chromedriver.");
+        }
+
+        System.out.println("File unzipped.\nAttemping to patch executable...");
+
+        test = driverPath;
     }
 }
