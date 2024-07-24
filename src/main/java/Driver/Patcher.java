@@ -14,20 +14,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 public class Patcher {
 
-    private static final String zipName = "undetected_chromedriver.zip";
     private static final String exeName = "undetected_chromedriver";
 
     private final PatcherUtil.OSType os;
     private final LooseVersion driverVersion;
     private final Path saveLocation;
 
-    public void unzipChromedriver(Path zipFile) {
+    public Path unzipChromedriver(Path zipFile) {
         String fileBaseName = FilenameUtils.getBaseName(zipFile.getFileName().toString());
         Path destination = Paths.get(zipFile.getParent().toString(), fileBaseName);
 
@@ -52,44 +52,21 @@ public class Patcher {
         } catch (IOException ex) {
             throw new RuntimeException(ex.getMessage());
         }
-    }
 
+        String name = "chromedriver" + (os == PatcherUtil.OSType.WINDOWS ? ".exe" : "");
 
-    public Path extractChromedriver(Path dir) {
-        File destination = dir.toFile();
-        File zipFile = new File(destination, (driverVersion + "_" + zipName));
-        File exeFile = new File(destination, (driverVersion + "_" + exeName));
+        Iterator<File> files = FileUtils.iterateFiles(destination.toFile(), null, true);
 
-        // make this more descriptive at some point
-        if (!destination.exists() ) {
-            throw new RuntimeException("Couldn't find files.");
-        }
-
-        try {
-            ZipInputStream input = new ZipInputStream(new FileInputStream(zipFile));
-
-            ZipEntry entry = input.getNextEntry();
-            while (entry != null) {
-                if (entry.getName().equalsIgnoreCase("chromedriver")) {
-                    BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(exeFile));
-                    byte[] bytesIn = new byte[4096];
-
-                    int read = 0;
-                    while ((read = input.read(bytesIn)) != -1) {
-                        output.write(bytesIn, 0, read);
-                    }
-
-                    output.close();
-                    break;
-                }
+        while (files.hasNext()) {
+            File file = files.next();
+            if (file.getName().equalsIgnoreCase(name)) {
+                return file.toPath();
             }
-
-            input.close();
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
         }
-        return exeFile.toPath();
+
+        return null;
     }
+
 
 
     // returns path of downloaded file.
@@ -111,7 +88,7 @@ public class Patcher {
 
 
         File file = null;
-        String name = driverVersion + "_" + zipName;
+        String name = driverVersion + ".zip";
 
         try {
             URL url = new URL(PatcherUtil.getURL());
@@ -159,6 +136,16 @@ public class Patcher {
         }
     }
 
+    private boolean isPatched() {
+        File patchedExe = new File(saveLocation.toFile(), (driverVersion + "_" + exeName + (this.os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")));
+
+        if (patchedExe.exists()) {
+            return true;
+        }
+
+        return false;
+    }
+
     public Patcher() {
         this.os = PatcherUtil.determineOS();
         this.driverVersion = PatcherUtil.fetchReleaseNumber();
@@ -177,7 +164,7 @@ public class Patcher {
         System.out.println("Archive downloaded.");
 
         System.out.println("Unzipping Archive.");
-        unzipChromedriver(zipPath);
-        System.out.println("File Unzipped.");
+        Path driverPath = unzipChromedriver(zipPath);
+        System.out.println("File Unzipped, driver location: " + driverPath);
     }
 }
