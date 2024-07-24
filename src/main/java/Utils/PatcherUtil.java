@@ -6,22 +6,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.IOFileFilter;
-import org.apache.commons.io.filefilter.TrueFileFilter;
-
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.Buffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public final class PatcherUtil {
 
@@ -36,13 +27,18 @@ public final class PatcherUtil {
         OTHER
     }
 
-    private static final OSType os = DetermineOS();
+    // only fetch the jsonObject once.
     private static JsonObject jsonObject = null;
 
     // if something stops working, this might have changed.
     private static final String urlRepo = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
-    private static final String zipName = "undetected_chromedriver.zip";
-    private static final String exeName = "undetected_chromedriver";
+
+    public static JsonObject GetJson() {
+        if (jsonObject == null) {
+            jsonObject = FetchDriverData();
+        }
+        return jsonObject;
+    }
 
     private static OSType DetermineOS(String name) {
         OSType type = OSType.OTHER;
@@ -59,20 +55,13 @@ public final class PatcherUtil {
     }
 
     public static OSType DetermineOS() {
-        return os == null ? DetermineOS(System.getProperty("os.name")) : os;
-    }
-
-    public static boolean IsPosix() {
-        assert os != null;
-        return (os == OSType.LINUX || os == OSType.MACOS);
+        return DetermineOS(System.getProperty("os.name"));
     }
 
     public static Path GeneratePath() {
-        assert os != null;
-
         String path = null;
 
-        switch (os) {
+        switch (DetermineOS()) {
             case OSType.WINDOWS:
                 path = "~/appdata/roaming/undetected_chromedriver";
                 break;
@@ -114,7 +103,7 @@ public final class PatcherUtil {
         return new Gson().fromJson(builder.toString(), JsonObject.class);
     }
 
-    private static String GetURL() {
+    public static String GetURL() {
         JsonArray downloads = jsonObject.getAsJsonObject("channels").getAsJsonObject("Stable").getAsJsonObject("downloads").getAsJsonArray("chromedriver");
         String url = null;
 
@@ -131,48 +120,6 @@ public final class PatcherUtil {
         }
 
         return url;
-    }
-
-
-    // returns path of downloaded file.
-    public static Path DownloadChromeDriver() {
-        if (jsonObject == null) {
-            jsonObject = FetchDriverData();
-        }
-
-        Path saveLocation = GeneratePath();
-
-        // Check saveLocation exists, if not create it.
-        try {
-            Files.createDirectories(saveLocation);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
-        }
-
-        if (!saveLocation.toFile().exists() || !saveLocation.toFile().isDirectory()) {
-            throw new RuntimeException(saveLocation.toString() + " is not a directory.");
-        }
-
-
-        File file = null;
-        String name = FetchReleaseNumber() + "_" + zipName;
-
-        try {
-            URL url = new URL(GetURL());
-            file = new File(saveLocation.toString(), name);
-
-            /*
-             * If a file of the same version already exists, don't download it again.
-             * when the unzip function has been written, make it check for the executable, as the zip file will be deleted
-             */
-            if (!file.exists()) {
-                FileUtils.copyURLToFile(url, file);
-            }
-        } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
-        }
-
-        return file.toPath();
     }
 
     // pretty sure this isn't needed anymore, see PatcherUtil.DownloadChromeDriver
@@ -210,31 +157,5 @@ public final class PatcherUtil {
     public static boolean ExecutablePatched(Path executable) {
         File file = executable.toFile();
         return file.exists() && file.isFile();
-    }
-
-    public static void CleanupFolder() {
-        File[] files = GeneratePath().toFile().listFiles();
-
-        if (files == null) {
-            System.out.println("Nothing to cleanup (probably).");
-            return;
-        }
-
-        for (File file : files) {
-            System.out.println(file.getName());
-
-            if (file.getName().equalsIgnoreCase(exeName)) continue;
-
-            try {
-                if (file.isDirectory()) {
-                    FileUtils.cleanDirectory(file);
-                    FileUtils.deleteDirectory(file);
-                } else {
-                    FileUtils.delete(file);
-                }
-            } catch (IOException ex) {
-                System.out.println(ex.getMessage());
-            }
-        }
     }
 }
