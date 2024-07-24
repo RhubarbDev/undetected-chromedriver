@@ -152,10 +152,4 @@ public final class PatcherUtil {
 
         return cdc.toString();
     }
-
-    // this is a bit of a naive approach, it doesn't know if its patched, only if it exists.
-    public static boolean checkIsPatched(Path executable) {
-        File file = executable.toFile();
-        return file.exists() && file.isFile();
-    }
 }
