@@ -2,7 +2,6 @@ package Driver;
 
 import LooseVersion.LooseVersion;
 import Utils.PatcherUtil;
-import com.google.gson.JsonObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -11,11 +10,15 @@ import java.io.*;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -23,11 +26,16 @@ public class Patcher {
 
     private static final String exeName = "undetected_chromedriver";
 
+    private Path driverPath;
+
     private final PatcherUtil.OSType os;
     private final LooseVersion version;
     private final Path saveLocation;
-    public Path test;
 
+    public Path getDriver() {
+        assert driverPath != null;
+        return driverPath;
+    }
 
     public Path unzipChromedriver(Path zipFile) {
         String fileBaseName = FilenameUtils.getBaseName(zipFile.getFileName().toString());
@@ -85,7 +93,6 @@ public class Patcher {
             throw new RuntimeException(saveLocation + " is not a directory.");
         }
 
-
         File file = null;
         String name = version + ".zip";
 
@@ -139,14 +146,40 @@ public class Patcher {
         }
     }
 
-    private boolean isPatched() {
-        File patchedExe = new File(saveLocation.toFile(), (version + "_" + exeName + (this.os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")));
+    public boolean attemptPatch(Path driverPath) {
+        try (RandomAccessFile file = new RandomAccessFile(driverPath.toFile(), "rw")) {
+            byte[] buffer = new byte[1024];
+            StringBuilder builder = new StringBuilder();
+            int bytesRead;
+            while ((bytesRead = file.read(buffer)) != -1) {
+                builder.append(new String(buffer, 0, bytesRead, StandardCharsets.ISO_8859_1));
+            }
+            String content = builder.toString();
+            Pattern pattern = Pattern.compile("\\{window\\.cdc.*?;}");
+            Matcher matcher = pattern.matcher(content);
+            if (matcher.find()) {
+                String foundString = matcher.group();
+                String replacementString = "{console.log(\"undetected chromedriver 1337!\")}";
+                StringBuilder target = new StringBuilder(replacementString);
+                int paddingLength = foundString.length() - replacementString.length();
+                target.append(" ".repeat(Math.max(0, paddingLength)));
+                String newContent = content.replace(foundString, target.toString());
+                file.setLength(0);
+                file.seek(0);
+                file.write(newContent.getBytes(StandardCharsets.ISO_8859_1));
 
-        if (patchedExe.exists()) {
-            return true;
+                return true;
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException("Failed to patch: " + ex.getMessage());
         }
 
         return false;
+    }
+
+    private boolean isPatched() {
+        File patchedExe = new File(saveLocation.toFile(), (version + "_" + exeName + (this.os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")));
+        return patchedExe.exists();
     }
 
     public Patcher() {
@@ -170,7 +203,7 @@ public class Patcher {
         Path zipPath = downloadChromedriver(downloadUrl);
         System.out.println("Archive downloaded.\nUnzipping Archive.");
 
-        Path driverPath = unzipChromedriver(zipPath);
+        driverPath = unzipChromedriver(zipPath);
 
         if (driverPath == null) {
             throw new RuntimeException("Couldn't find Chromedriver.");
@@ -178,7 +211,9 @@ public class Patcher {
 
         System.out.println("File unzipped.\nAttemping to patch executable...");
 
-        test = driverPath;
+        if (attemptPatch(driverPath)) {
+            System.out.println("Driver patched.");
+        }
 
         //System.out.println("Cleaning up.");
         //cleanupFolder();
