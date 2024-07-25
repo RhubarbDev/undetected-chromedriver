@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.regex.Pattern;
@@ -93,7 +92,7 @@ public class Patcher {
             throw new RuntimeException(saveLocation + " is not a directory.");
         }
 
-        File file = null;
+        File file;
         String name = version + ".zip";
 
         if (downloadUrl == null) {
@@ -209,7 +208,7 @@ public class Patcher {
             throw new RuntimeException("Couldn't find Chromedriver.");
         }
 
-        System.out.println("File unzipped.\nAttemping to patch executable...");
+        System.out.println("File unzipped.\nAttempting to patch executable...");
 
         if (attemptPatch(driverPath)) {
             System.out.println("Driver patched.");

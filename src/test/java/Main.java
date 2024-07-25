@@ -1,12 +1,6 @@
 import Driver.Patcher;
-import LooseVersion.LooseVersion;
-import Utils.PatcherUtil;
-import com.google.gson.JsonObject;
-import org.checkerframework.checker.units.qual.C;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.JavascriptExecutor;
-
 import java.nio.file.Path;
 
 public class Main {

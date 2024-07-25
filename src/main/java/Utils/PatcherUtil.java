@@ -10,13 +10,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Random;
+import java.util.Objects;
 
 public final class PatcherUtil {
-
-    private static final char[] asciiLower = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
-
-    private static final Random rand = new Random();
 
     public enum OSType {
         WINDOWS,
@@ -25,9 +21,11 @@ public final class PatcherUtil {
         OTHER
     }
 
-    // only fetch the jsonObject once.
     private static JsonObject jsonObject = null;
-    // if something stops working, this might have changed.
+
+    /* jsonEndpoint - json endpoint contains download links for versions of chromedriver > 115
+     * legacyDriverVersions - url used to find downloads for versions of chromedriver < 115
+     */
     private static final String jsonEndpoint = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json";
     private static final String legacyDriverVersions = "https://chromedriver.storage.googleapis.com/";
 
@@ -60,22 +58,12 @@ public final class PatcherUtil {
     }
 
     public static Path generatePath() {
-        String path = null;
-
-        switch (determineOS()) {
-            case OSType.WINDOWS:
-                path = "~/appdata/roaming/undetected_chromedriver";
-                break;
-            case OSType.LINUX:
-                path = "~/.local/share/undetected_chromedriver";
-                break;
-            case OSType.MACOS:
-                path = "~/Library/Application Support/undetected_chromedriver";
-                break;
-            default:
-                path =  "~/.undetected_chromedriver";
-                break;
-        }
+        String path = switch (determineOS()) {
+            case OSType.WINDOWS -> "~/appdata/roaming/undetected_chromedriver";
+            case OSType.LINUX -> "~/.local/share/undetected_chromedriver";
+            case OSType.MACOS -> "~/Library/Application Support/undetected_chromedriver";
+            default -> "~/.undetected_chromedriver";
+        };
 
         if (System.getenv().containsKey("LAMBDA_TASK_ROOT")) {
             path = "/tmp/undetected_chromedriver";
@@ -134,17 +122,7 @@ public final class PatcherUtil {
 
     // this might not work perfectly.
     public static String legacyDownloadUrl(LooseVersion version) {
-
-        /*
-         * https://chromedriver.storage.googleapis.com/LATEST_RELEASE_114
-         *
-         *
-         *
-         *
-         *
-         */
-
-        LooseVersion validVersion = null;
+        LooseVersion validVersion;
 
         try {
             String majorVersion = version.toString().split("\\.")[0];
@@ -152,10 +130,6 @@ public final class PatcherUtil {
             validVersion = new LooseVersion(IOUtils.toString(url, StandardCharsets.UTF_8));
         } catch (Exception ex) {
             throw new RuntimeException(ex.getMessage());
-        }
-
-        if (validVersion == null) {
-            throw new RuntimeException("Couldn't find valid version.");
         }
 
         String fileName = switch (PatcherUtil.determineOS()) {
@@ -197,62 +171,46 @@ public final class PatcherUtil {
     }
 
     public static LooseVersion getInstalledChromeVersion() {
-        LooseVersion version = null;
         String[] command;
-        int index = -1;
+        int index = switch (determineOS()) {
+            case OSType.WINDOWS -> {
+                command = new String[]{"cmd", "/c", "reg query \"HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon\" /v version"};
+                yield 1;
+            }
+            case OSType.MACOS -> {
+                command = new String[]{"/Application/Google Chrome.app/Contents/MacOS/Google Chrome", "--version"};
+                yield 2;
+            }
+            case OSType.LINUX -> {
+                command = new String[]{"/opt/google/chrome/chrome", "--version"};
+                yield 2;
+            }
+            default -> throw new RuntimeException("Couldn't determine OS");
+        };
 
-
-        // TODO: This needs testing on windows & MacOS
-        switch (determineOS()) {
-            case OSType.WINDOWS:
-                command = new String[] { "cmd", "/c", "reg query \"HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon\" /v version" };
-                index = 1;
-                break;
-            case OSType.MACOS:
-                command = new String[] { "/Application/Google Chrome.app/Contents/MacOS/Google Chrome", "--version" };
-                index = 2;
-                break;
-            case OSType.LINUX:
-                command = new String[] { "/opt/google/chrome/chrome", "--version" };
-                index = 2;
-                break;
-            default:
-                throw new RuntimeException("Couldn't determine OS");
-        }
-
-        String ln = null;
+        String line = null;
 
         try {
             ProcessBuilder builder = new ProcessBuilder(command);
             builder.directory(new File(System.getProperty("user.home")));
             Process proc = builder.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains("Google Chrome") || line.contains("version")) {
-                    ln = line;
+            String read;
+            while ((read = reader.readLine()) != null) {
+                if (read.contains("Google Chrome") || Objects.requireNonNull(line).contains("version")) {
+                    line = read;
                 }
             }
             reader.close();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            throw new RuntimeException(ex.getMessage());
         }
 
-        if (ln == null) {
+        if (line == null) {
             throw new RuntimeException("Couldn't find version.");
         }
 
-        String[] items = ln.split(" ");
+        String[] items = line.split(" ");
         return new LooseVersion(items[index]);
-    }
-
-    public static String generateCDC() {
-        StringBuilder cdc = new StringBuilder();
-
-        for(int i = 0; i < 27; i++) {
-            cdc.append(asciiLower[rand.nextInt(asciiLower.length)]);
-        }
-
-        return cdc.toString();
     }
 }

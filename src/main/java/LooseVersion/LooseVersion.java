@@ -58,15 +58,12 @@ public class LooseVersion implements Comparable<LooseVersion> {
             return 1;
         }
 
-        if (thisPart instanceof Integer && otherPart instanceof  Integer) {
-            return ((Integer) thisPart).compareTo((Integer) otherPart);
-        } else if (thisPart instanceof String && otherPart instanceof String) {
-            return ((String) thisPart).compareTo((String) otherPart);
-        } else if (thisPart instanceof Integer) {
-            return -1; // Integers are less than strings
-        } else {
-            return 1;
-        }
+        return switch (thisPart) {
+            case Integer i when otherPart instanceof Integer -> i.compareTo((Integer) otherPart);
+            case String s when otherPart instanceof String -> s.compareTo((String) otherPart);
+            case Integer _ -> -1; // Integers are less than strings
+            default -> 1;
+        };
     }
 
     @Override
