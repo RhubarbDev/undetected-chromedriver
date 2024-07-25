@@ -29,6 +29,7 @@ public final class PatcherUtil {
     private static JsonObject jsonObject = null;
     // if something stops working, this might have changed.
     private static final String jsonEndpoint = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json";
+    private static final String legacyDriverVersions = "https://chromedriver.storage.googleapis.com/";
 
     public static JsonObject getJson() {
         if (jsonObject == null) {
@@ -98,7 +99,18 @@ public final class PatcherUtil {
             throw new RuntimeException(ex.getCause());
         }
 
+        if(obj.length < 1) {
+            throw new RuntimeException("Array Empty.");
+        }
+
         LooseVersion chromeVersion = getInstalledChromeVersion();
+
+        // Check the latest version, before searching the entire array.
+        LooseVersion latest = new LooseVersion(obj[0].get("version").getAsString());
+
+        if (latest.equals(chromeVersion)) {
+            return obj[0];
+        }
 
         int low = 0, high = obj.length - 1;
         while (low <= high) {
@@ -120,12 +132,57 @@ public final class PatcherUtil {
         return null;
     }
 
+    // this might not work perfectly.
+    public static String legacyDownloadUrl(LooseVersion version) {
+
+        /*
+         * https://chromedriver.storage.googleapis.com/LATEST_RELEASE_114
+         *
+         *
+         *
+         *
+         *
+         */
+
+        LooseVersion validVersion = null;
+
+        try {
+            String majorVersion = version.toString().split("\\.")[0];
+            URL url = new URI(legacyDriverVersions + "LATEST_RELEASE_" + majorVersion).toURL();
+            validVersion = new LooseVersion(IOUtils.toString(url, StandardCharsets.UTF_8));
+        } catch (Exception ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
+
+        if (validVersion == null) {
+            throw new RuntimeException("Couldn't find valid version.");
+        }
+
+        String fileName = switch (PatcherUtil.determineOS()) {
+            case OSType.WINDOWS -> "chromedriver_win32.zip";
+            case OSType.MACOS -> "chromedriver_mac64.zip";
+            case OSType.LINUX -> "chromedriver_linux64.zip";
+            case OSType.OTHER -> throw new RuntimeException("Couldn't determine OS");
+        };
+
+        return legacyDriverVersions + validVersion + "/" + fileName;
+    }
+
+    // This function could easily break, me thinks.
     public static String getURL() {
-        JsonArray downloads = getJson().getAsJsonObject("downloads").getAsJsonArray("chromedriver");
+        JsonObject downloads = getJson().getAsJsonObject("downloads");
+
         String url = null;
 
-        for (JsonElement download : downloads) {
-            JsonObject obj = download.getAsJsonObject();
+        // versions lower than 115 don't have chromedriver
+        if (!downloads.has("chromedriver")) {
+            return legacyDownloadUrl(getInstalledChromeVersion());
+        }
+
+        JsonArray versions = downloads.getAsJsonArray("chromedriver");
+
+        for (JsonElement version : versions) {
+            JsonObject obj = version.getAsJsonObject();
             if (determineOS(obj.get("platform").getAsString()) == determineOS()) {
                 url = obj.get("url").getAsString();
                 break;

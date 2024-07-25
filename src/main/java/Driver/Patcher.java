@@ -70,7 +70,7 @@ public class Patcher {
     }
 
     // returns path of downloaded file.
-    public Path downloadChromedriver() {
+    public Path downloadChromedriver(String downloadUrl) {
 
         Path saveLocation = PatcherUtil.generatePath();
 
@@ -89,8 +89,12 @@ public class Patcher {
         File file = null;
         String name = version + ".zip";
 
+        if (downloadUrl == null) {
+            downloadUrl = PatcherUtil.getURL();
+        }
+
         try {
-            URL url = new URI(PatcherUtil.getURL()).toURL();
+            URL url = new URI(downloadUrl).toURL();
             file = new File(saveLocation.toString(), name);
 
             /*
@@ -146,6 +150,10 @@ public class Patcher {
     }
 
     public Patcher() {
+        this(null);
+    }
+
+    public Patcher(String downloadUrl) {
         this.os = PatcherUtil.determineOS();
         this.version = PatcherUtil.getInstalledChromeVersion();
         this.saveLocation = PatcherUtil.generatePath();
@@ -159,7 +167,7 @@ public class Patcher {
         }
 
         System.out.println("Downloading Chromedriver...");
-        Path zipPath = downloadChromedriver();
+        Path zipPath = downloadChromedriver(downloadUrl);
         System.out.println("Archive downloaded.\nUnzipping Archive.");
 
         Path driverPath = unzipChromedriver(zipPath);
@@ -171,5 +179,8 @@ public class Patcher {
         System.out.println("File unzipped.\nAttemping to patch executable...");
 
         test = driverPath;
+
+        //System.out.println("Cleaning up.");
+        //cleanupFolder();
     }
 }
