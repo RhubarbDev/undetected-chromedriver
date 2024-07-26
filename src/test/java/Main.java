@@ -1,41 +1,33 @@
 import Driver.Patcher;
-import Utils.UserAgentUtil;
-import com.google.common.base.StandardSystemProperty;
-import org.openqa.selenium.JavascriptExecutor;
+import Driver.UndetectedOptions;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import java.nio.file.Path;
 
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
+        UndetectedOptions opts = new UndetectedOptions();
         Patcher patcher = new Patcher();
-        Path path = patcher.getDriver();
 
-        if (!path.toFile().setExecutable(true)) {
-            throw new RuntimeException("Couldn't set executable.");
+        System.setProperty("webdriver.chrome.driver", patcher.getDriver().toString());
+
+        ChromeDriver driver;
+        try {
+            driver = new ChromeDriver(opts);
+        } catch (Exception ignore){
+            try {
+                opts.addArguments("--no-sandbox");
+                opts.addArguments("--disable-dev-shm-usage");
+                driver = new ChromeDriver(opts);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex.getMessage());
+            }
         }
 
-        System.setProperty("webdriver.chrome.driver", path.toString());
+        driver.get("https://bot.sannysoft.com");
 
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("--headless");
-
-        ChromeDriver driver = new ChromeDriver(options);
-        String userAgent = (String) ((JavascriptExecutor) driver).executeScript("return navigator.userAgent;");
-        System.out.println(userAgent);
-        options.addArguments("user-agent=" + UserAgentUtil.fixUserAgent(userAgent));
-        driver.quit();
-        driver = new ChromeDriver(options);
-
-        userAgent = (String) ((JavascriptExecutor) driver).executeScript("return navigator.userAgent;");
-        System.out.println(userAgent);
-
-
-        driver.get("https://google.com");
         System.out.println(driver.getTitle());
+
+        Thread.sleep(50000);
 
         driver.close();
         driver.quit();
