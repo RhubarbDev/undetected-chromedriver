@@ -1,33 +1,20 @@
 import Driver.Patcher;
+import Driver.UndetectedDriver;
 import Driver.UndetectedOptions;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeDriverService;
 
 public class Main {
 
     public static void main(String[] args) throws InterruptedException {
-        UndetectedOptions opts = new UndetectedOptions();
-        Patcher patcher = new Patcher();
+        UndetectedOptions options = new UndetectedOptions();
+        options.addArguments("--no-sandbox", "--disable-dev-shm-usage");
 
-        System.setProperty("webdriver.chrome.driver", patcher.getDriver().toString());
-
-        ChromeDriver driver;
-        try {
-            driver = new ChromeDriver(opts);
-        } catch (Exception ignore){
-            try {
-                opts.addArguments("--no-sandbox");
-                opts.addArguments("--disable-dev-shm-usage");
-                driver = new ChromeDriver(opts);
-            } catch (Exception ex) {
-                throw new RuntimeException(ex.getMessage());
-            }
-        }
+        UndetectedDriver driver = UndetectedDriver.createDriver(options, false, true, true);
 
         driver.get("https://bot.sannysoft.com");
 
-        System.out.println(driver.getTitle());
-
-        Thread.sleep(50000);
+        Thread.sleep(5000);
 
         driver.close();
         driver.quit();

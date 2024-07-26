@@ -1,6 +1,5 @@
 package Driver;
 
-import Utils.DriverUtils;
 import Utils.UserAgentUtil;
 import org.openqa.selenium.chrome.ChromeOptions;
 
@@ -20,19 +19,5 @@ public class UndetectedOptions extends ChromeOptions {
         // Experimental Options to avoid bot detection
         this.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
         this.setExperimentalOption("useAutomationExtension", null);
-
-        // Set the remote debugging port
-        this.addArguments("--remote-debugging-port=" + DriverUtils.getFreePort());
-
-
-
-
-
-
-
-
-
-
-
     }
 }
