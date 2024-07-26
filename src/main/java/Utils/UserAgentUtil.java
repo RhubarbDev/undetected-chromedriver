@@ -2,7 +2,7 @@ package Utils;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import LooseVersion.LooseVersion;
+import Driver.LooseVersion;
 
 public final class UserAgentUtil {
     private static final String[] versions = {

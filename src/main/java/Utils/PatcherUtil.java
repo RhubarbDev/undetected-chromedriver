@@ -1,6 +1,6 @@
 package Utils;
 
-import LooseVersion.LooseVersion;
+import Driver.LooseVersion;
 import com.google.gson.*;
 import org.apache.commons.io.IOUtils;
 
