@@ -21,6 +21,9 @@ import java.util.regex.Matcher;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+/**
+ * The type Patcher.
+ */
 public class Patcher {
 
     private static final String exeName = "undetected_%_chromedriver";
@@ -31,10 +34,21 @@ public class Patcher {
     private final PatcherUtil.OSType os;
     private final LooseVersion version;
 
+    /**
+     * Gets Path to the patched driver.
+     *
+     * @return outputPath
+     */
     public Path getDriver() {
         return outputPath;
     }
 
+    /**
+     * Unzips the downloaded driver folder.
+     *
+     * @param zipFile the zip file
+     * @return the path to the Unzipped chromedriver folder
+     */
     public Path unzipChromedriver(Path zipFile) {
         String fileBaseName = FilenameUtils.getBaseName(zipFile.getFileName().toString());
         Path destination = Paths.get(zipFile.getParent().toString(), fileBaseName);
@@ -75,7 +89,12 @@ public class Patcher {
         return null;
     }
 
-    // returns path of downloaded file.
+    /**
+     * Downloads the chromedriver zip file from the url provided by getURL
+     *
+     * @param downloadUrl the url of the zip file
+     * @return the path of the downloaded file
+     */
     public Path downloadChromedriver(String downloadUrl) {
 
         Path saveLocation = PatcherUtil.generatePath();
@@ -111,6 +130,9 @@ public class Patcher {
         return file.toPath();
     }
 
+    /**
+     * Cleans the folder (see generatePath) leaving only the patched chromedriver
+     */
     public void cleanupFolder() {
         File[] files = PatcherUtil.generatePath().toFile().listFiles();
 
@@ -139,6 +161,11 @@ public class Patcher {
         }
     }
 
+    /**
+     * Attempts to patch the downloaded chromedriver executable
+     *
+     * @return true if patch succeeded false otherwise
+     */
     public boolean attemptPatch() {
         assert !outputPath.toFile().exists();
 
@@ -173,6 +200,9 @@ public class Patcher {
         return false;
     }
 
+    /**
+     * Instantiates a new Patcher.
+     */
     public Patcher() {
         this(null);
     }
@@ -183,6 +213,11 @@ public class Patcher {
         }
     }
 
+    /**
+     * Instantiates a new Patcher.
+     *
+     * @param downloadUrl custom download url - useful if google changes download location
+     */
     public Patcher(String downloadUrl) {
         this.os = PatcherUtil.determineOS();
         this.version = PatcherUtil.getInstalledChromeVersion();

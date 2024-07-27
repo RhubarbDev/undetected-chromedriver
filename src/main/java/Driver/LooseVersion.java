@@ -6,11 +6,19 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * The type Loose version.
+ */
 public class LooseVersion implements Comparable<LooseVersion> {
     private static final Pattern COMPONENT_RE = Pattern.compile("(\\d+|[a-z]+|\\.)");
     private final String versionString;
     private final List<Object> version;
 
+    /**
+     * Instantiates a new Loose version.
+     *
+     * @param vString the version stored as a string.
+     */
     public LooseVersion(String vString) {
         assert vString != null;
         this.versionString = vString;
@@ -28,6 +36,19 @@ public class LooseVersion implements Comparable<LooseVersion> {
                 }
             }
         }
+    }
+
+    /**
+     * Gets part.
+     *
+     * @param index the location of an object in version
+     * @return the Object in version
+     */
+    public Object getPart(int index) {
+        if (index < 0 || index >= version.size()) {
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        return version.get(index);
     }
 
     @Override

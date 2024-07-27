@@ -7,10 +7,14 @@ import org.openqa.selenium.chrome.ChromeDriverService;
 public class Main {
 
     public static void main(String[] args) throws InterruptedException {
-        UndetectedOptions options = new UndetectedOptions();
-        options.addArguments("--no-sandbox", "--disable-dev-shm-usage");
+        UndetectedOptions options = new UndetectedOptions(
+                false,
+                true,
+                true,
+                true
+        );
 
-        UndetectedDriver driver = UndetectedDriver.createDriver(options, false, true, true);
+        UndetectedDriver driver = UndetectedDriver.createDriver(options);
 
         driver.get("https://bot.sannysoft.com");
 

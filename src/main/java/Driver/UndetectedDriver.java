@@ -1,45 +1,29 @@
 package Driver;
 
 import Utils.PatcherUtil;
+import Utils.UserAgentUtil;
 import org.openqa.selenium.chrome.ChromeDriver;
 
+/**
+ * The type Undetected driver.
+ */
 public class UndetectedDriver extends ChromeDriver {
 
-    public UndetectedDriver(UndetectedOptions options) {
+    /**
+     * Instantiates a new Undetected driver.
+     *
+     * @param options ChromeOptions passed to the driver.
+     */
+    private UndetectedDriver(UndetectedOptions options) {
         super(options);
     }
 
+    /**
+     * Create driver undetected driver.
+     *
+     * @param options         the options
+     */
     public static UndetectedDriver createDriver(UndetectedOptions options) {
-        return createDriver(options, false, false, false);
-    }
-
-    public static UndetectedDriver createDriver(
-            UndetectedOptions options,
-            boolean headless,
-            boolean suppressWelcome,
-            boolean noSandbox
-    ) {
-        // Not fully supported.
-        if (headless) {
-            try {
-                int version = Integer.parseInt(PatcherUtil.getInstalledChromeVersion().toString().split("\\.")[0]);
-                if (version < 108) {
-                    options.addArguments("--headless=chrome");
-                } else {
-                    options.addArguments("--headless=new");
-                }
-            } catch (Exception ignored) {
-                options.addArguments("--headless=new");
-            }
-        }
-
-        if (noSandbox) {
-            options.addArguments("--no-sandbox", "--test-type");
-        }
-
-        if (suppressWelcome) {
-            options.addArguments("--no-default-browser-check", "--no-first-run");
-        }
 
         Patcher patcher = new Patcher();
 
@@ -47,8 +31,4 @@ public class UndetectedDriver extends ChromeDriver {
 
         return new UndetectedDriver(options);
     }
-
-
-
-
 }
