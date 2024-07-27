@@ -1,7 +1,5 @@
-package Driver;
+package driver;
 
-import Utils.PatcherUtil;
-import Utils.UserAgentUtil;
 import org.openqa.selenium.chrome.ChromeDriver;
 
 /**
@@ -21,7 +19,8 @@ public class UndetectedDriver extends ChromeDriver {
     /**
      * Create driver undetected driver.
      *
-     * @param options         the options
+     * @param options ChromeOptions passed to the driver.
+     * @return the undetected driver
      */
     public static UndetectedDriver createDriver(UndetectedOptions options) {
 

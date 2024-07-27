@@ -1,22 +1,39 @@
-package Driver;
+package driver;
 
-import Utils.PatcherUtil;
-import Utils.UserAgentUtil;
+import utils.PatcherUtil;
+import utils.UserAgentUtil;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.util.Collections;
 
+/**
+ * The type Undetected options.
+ */
 public class UndetectedOptions extends ChromeOptions {
+    /**
+     * Instantiates a new Undetected options.
+     */
     public UndetectedOptions() {
         this(false, false, false, false);
     }
 
+    /**
+     * Instantiates a new Undetected options.
+     *
+     * @param headless add headless driver options
+     */
     public UndetectedOptions(
             boolean headless
     ) {
         this(headless, false, false, false);
     }
 
+    /**
+     * Instantiates a new Undetected options.
+     *
+     * @param headless        add headless driver options
+     * @param suppressWelcome add suppressWelcome options
+     */
     public UndetectedOptions(
             boolean headless,
             boolean suppressWelcome
@@ -24,6 +41,13 @@ public class UndetectedOptions extends ChromeOptions {
         this(headless, suppressWelcome, false, false);
     }
 
+    /**
+     * Instantiates a new Undetected options.
+     *
+     * @param headless        add headless driver options
+     * @param suppressWelcome add suppressWelcome options
+     * @param noSandbox       add noSandbox options
+     */
     public UndetectedOptions(
             boolean headless,
             boolean suppressWelcome,
@@ -32,6 +56,14 @@ public class UndetectedOptions extends ChromeOptions {
         this(headless, suppressWelcome, noSandbox, false);
     }
 
+    /**
+     * Instantiates a new Undetected options.
+     *
+     * @param headless               add headless driver options
+     * @param suppressWelcome        add suppressWelcome options
+     * @param noSandbox              add noSandbox options
+     * @param devToolsActivePortsFix add devToolActivePortsFix options
+     */
     public UndetectedOptions(
             boolean headless,
             boolean suppressWelcome,

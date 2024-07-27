@@ -1,6 +1,6 @@
-package Utils;
+package utils;
 
-import Driver.LooseVersion;
+import driver.LooseVersion;
 import com.google.gson.*;
 import org.apache.commons.io.IOUtils;
 
@@ -12,23 +12,45 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 
+/**
+ * The type Patcher util.
+ */
 public final class PatcherUtil {
-
+    /**
+     * The enum Os type.
+     */
     public enum OSType {
+        /**
+         * Windows os type.
+         */
         WINDOWS,
+        /**
+         * Macos os type.
+         */
         MACOS,
+        /**
+         * Linux os type.
+         */
         LINUX,
+        /**
+         * Other os type.
+         */
         OTHER
     }
 
     private static JsonObject jsonObject = null;
 
-    /* jsonEndpoint - json endpoint contains download links for versions of chromedriver > 115
-     * legacyDriverVersions - url used to find downloads for versions of chromedriver < 115
+    /* JSON_ENDPOINT - json endpoint contains download links for versions of chromedriver > 115
+     * LEGACY_DRIVER_VERSION - url used to find downloads for versions of chromedriver < 115
      */
-    private static final String jsonEndpoint = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json";
-    private static final String legacyDriverVersions = "https://chromedriver.storage.googleapis.com/";
+    private static final String JSON_ENDPOINT = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json";
+    private static final String LEGACY_DRIVER_VERSION = "https://chromedriver.storage.googleapis.com/";
 
+    /**
+     * Gets json.
+     *
+     * @return the json object for the driver version
+     */
     public static JsonObject getJson() {
         if (jsonObject == null) {
             jsonObject = fetchJson();
@@ -53,10 +75,20 @@ public final class PatcherUtil {
         return type;
     }
 
+    /**
+     * Determine os type.
+     *
+     * @return the os type
+     */
     public static OSType determineOS() {
         return determineOS(System.getProperty("os.name"));
     }
 
+    /**
+     * Generate path.
+     *
+     * @return the path where the program will save stuff.
+     */
     public static Path generatePath() {
         String path = switch (determineOS()) {
             case OSType.WINDOWS -> "~/appdata/roaming/undetected_chromedriver";
@@ -75,7 +107,7 @@ public final class PatcherUtil {
     private static JsonObject fetchJson() {
         JsonObject[] obj;
         try {
-            URL url = new URI(jsonEndpoint).toURL();
+            URL url = new URI(JSON_ENDPOINT).toURL();
             String data = IOUtils.toString(url, StandardCharsets.UTF_8);
 
             JsonArray array = JsonParser.parseString(data).getAsJsonObject().get("versions").getAsJsonArray();
@@ -120,13 +152,18 @@ public final class PatcherUtil {
         return null;
     }
 
-    // this might not work perfectly.
+    /**
+     * Legacy download url string.
+     *
+     * @param version the version of chromedriver
+     * @return the url to download chromedriver
+     */
     public static String legacyDownloadUrl(LooseVersion version) {
         LooseVersion validVersion;
 
         try {
             String majorVersion = version.toString().split("\\.")[0];
-            URL url = new URI(legacyDriverVersions + "LATEST_RELEASE_" + majorVersion).toURL();
+            URL url = new URI(LEGACY_DRIVER_VERSION + "LATEST_RELEASE_" + majorVersion).toURL();
             validVersion = new LooseVersion(IOUtils.toString(url, StandardCharsets.UTF_8));
         } catch (Exception ex) {
             throw new RuntimeException(ex.getMessage());
@@ -139,10 +176,14 @@ public final class PatcherUtil {
             case OSType.OTHER -> throw new RuntimeException("Couldn't determine OS");
         };
 
-        return legacyDriverVersions + validVersion + "/" + fileName;
+        return LEGACY_DRIVER_VERSION + validVersion + "/" + fileName;
     }
 
-    // This function could easily break, me thinks.
+    /**
+     * Gets url.
+     *
+     * @return the url to download chromedriver
+     */
     public static String getURL() {
         JsonObject downloads = getJson().getAsJsonObject("downloads");
 
@@ -170,6 +211,11 @@ public final class PatcherUtil {
         return url;
     }
 
+    /**
+     * Gets installed chrome version.
+     *
+     * @return the installed chrome version
+     */
     public static LooseVersion getInstalledChromeVersion() {
         String[] command;
         int index = switch (determineOS()) {

@@ -1,4 +1,6 @@
-package Driver;
+package driver;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,8 +21,7 @@ public class LooseVersion implements Comparable<LooseVersion> {
      *
      * @param vString the version stored as a string.
      */
-    public LooseVersion(String vString) {
-        assert vString != null;
+    public LooseVersion(@NonNull String vString) {
         this.versionString = vString;
 
         Matcher matcher = COMPONENT_RE.matcher(versionString);
@@ -62,7 +63,7 @@ public class LooseVersion implements Comparable<LooseVersion> {
             Object thisPart = i < this.version.size() ? this.version.get(i) : null;
             Object otherPart = i < other.version.size() ? other.version.get(i) : null;
 
-            int result = CompareParts(thisPart, otherPart);
+            int result = compareParts(thisPart, otherPart);
             if (result != 0) {
                 return result;
             }
@@ -70,7 +71,7 @@ public class LooseVersion implements Comparable<LooseVersion> {
         return 0;
     }
 
-    private int CompareParts(Object thisPart, Object otherPart) {
+    private int compareParts(Object thisPart, Object otherPart) {
         if (thisPart == null) {
             return otherPart == null ? 0 : -1;
         }
@@ -82,7 +83,7 @@ public class LooseVersion implements Comparable<LooseVersion> {
         return switch (thisPart) {
             case Integer i when otherPart instanceof Integer -> i.compareTo((Integer) otherPart);
             case String s when otherPart instanceof String -> s.compareTo((String) otherPart);
-            case Integer _ -> -1; // Integers are less than strings
+            case Integer i -> -1; // Integers are less than strings
             default -> 1;
         };
     }

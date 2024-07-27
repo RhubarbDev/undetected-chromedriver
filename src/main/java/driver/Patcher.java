@@ -1,6 +1,6 @@
-package Driver;
+package driver;
 
-import Utils.PatcherUtil;
+import utils.PatcherUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -16,6 +16,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.zip.ZipEntry;
@@ -25,8 +27,8 @@ import java.util.zip.ZipFile;
  * The type Patcher.
  */
 public class Patcher {
-
-    private static final String exeName = "undetected_%_chromedriver";
+    private static final Logger LOGGER = Logger.getLogger(Patcher.class.getName());
+    private static final String EXECUTABLE = "undetected_%_chromedriver";
 
     private Path inputPath;
     private final Path outputPath;
@@ -37,7 +39,7 @@ public class Patcher {
     /**
      * Gets Path to the patched driver.
      *
-     * @return outputPath
+     * @return outputPath driver
      */
     public Path getDriver() {
         return outputPath;
@@ -137,11 +139,11 @@ public class Patcher {
         File[] files = PatcherUtil.generatePath().toFile().listFiles();
 
         if (files == null) {
-            System.out.println("Nothing to cleanup (probably).");
+            LOGGER.log(Level.INFO, "Nothing to cleanup (probably).");
             return;
         }
 
-        String patchedName = exeName.replace("%", this.version.toString());
+        String patchedName = EXECUTABLE.replace("%", this.version.toString());
 
         for (File file : files) {
             try {
@@ -156,7 +158,7 @@ public class Patcher {
                     FileUtils.delete(file);
                 }
             } catch (IOException ex) {
-                System.out.println(ex.getMessage());
+                LOGGER.log(Level.WARNING, ex.getMessage());
             }
         }
     }
@@ -208,9 +210,7 @@ public class Patcher {
     }
 
     private void checkExecutable(File file) {
-        if (file.setExecutable(true)) {
-            System.out.println("Made {" + file + "} executable.");
-        }
+        file.setExecutable(true);
     }
 
     /**
@@ -224,21 +224,24 @@ public class Patcher {
         Path saveLocation = PatcherUtil.generatePath();
         this.outputPath = Paths.get(saveLocation +
                 FileSystems.getDefault().getSeparator() +
-                exeName.replaceFirst("%", version.toString()) +
+                EXECUTABLE.replaceFirst("%", version.toString()) +
                 (os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")
         );
 
-        System.out.println("Checking if Executable is patched...");
+        LOGGER.log(Level.INFO, "Checking if executable is patched...");
 
         if (outputPath.toFile().exists()) {
-            System.out.println("Patched File exists..");
+            LOGGER.log(Level.INFO, "Patched file exists.");
             checkExecutable(outputPath.toFile());
             return;
         }
 
-        System.out.println("Downloading Chromedriver...");
+        LOGGER.log(Level.INFO, "Downloading Chromedriver...");
+
         Path zipPath = downloadChromedriver(downloadUrl);
-        System.out.println("Archive downloaded.\nUnzipping Archive.");
+
+        LOGGER.log(Level.INFO, "Archive downloaded.");
+        LOGGER.log(Level.INFO, "Unzipping Archive.");
 
         this.inputPath = unzipChromedriver(zipPath);
 
@@ -246,15 +249,16 @@ public class Patcher {
             throw new RuntimeException("Couldn't find Chromedriver.");
         }
 
-        System.out.println("File unzipped.\nAttempting to patch executable...");
+        LOGGER.log(Level.INFO, "File Unzipped.");
+        LOGGER.log(Level.INFO, "Attempting to patch executable...");
 
         if (attemptPatch()) {
-            System.out.println("Driver patched.");
+            LOGGER.log(Level.INFO, "Driver patched.");
         }
 
         checkExecutable(outputPath.toFile());
 
-        System.out.println("Cleaning up.");
+        LOGGER.log(Level.INFO, "Cleaning up.");
         cleanupFolder();
     }
 }
