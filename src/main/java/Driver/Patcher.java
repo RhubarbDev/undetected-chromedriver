@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,17 +23,16 @@ import java.util.zip.ZipFile;
 
 public class Patcher {
 
-    private static final String exeName = "undetected_chromedriver";
+    private static final String exeName = "undetected_%_chromedriver";
 
-    private Path driverPath;
+    private Path inputPath;
+    private final Path outputPath;
 
     private final PatcherUtil.OSType os;
     private final LooseVersion version;
-    private final Path saveLocation;
 
     public Path getDriver() {
-        assert driverPath != null;
-        return driverPath;
+        return outputPath;
     }
 
     public Path unzipChromedriver(Path zipFile) {
@@ -101,11 +101,6 @@ public class Patcher {
         try {
             URL url = new URI(downloadUrl).toURL();
             file = new File(saveLocation.toString(), name);
-
-            /*
-             * If a file of the same version already exists, don't download it again.
-             * when the unzip function has been written, make it check for the executable, as the zip file will be deleted
-             */
             if (!file.exists()) {
                 FileUtils.copyURLToFile(url, file);
             }
@@ -124,7 +119,7 @@ public class Patcher {
             return;
         }
 
-        String patchedName = version + "_" + exeName;
+        String patchedName = exeName.replace("%", this.version.toString());
 
         for (File file : files) {
             try {
@@ -144,17 +139,23 @@ public class Patcher {
         }
     }
 
-    public boolean attemptPatch(Path driverPath) {
-        try (RandomAccessFile file = new RandomAccessFile(driverPath.toFile(), "rw")) {
+    public boolean attemptPatch() {
+        assert !outputPath.toFile().exists();
+
+        try (RandomAccessFile inputFile = new RandomAccessFile(this.inputPath.toFile(), "r");
+             RandomAccessFile outputFile = new RandomAccessFile(this.outputPath.toFile(), "rw")) {
+
             byte[] buffer = new byte[1024];
             StringBuilder builder = new StringBuilder();
             int bytesRead;
-            while ((bytesRead = file.read(buffer)) != -1) {
+            while ((bytesRead = inputFile.read(buffer)) != -1) {
                 builder.append(new String(buffer, 0, bytesRead, StandardCharsets.ISO_8859_1));
             }
+
             String content = builder.toString();
             Pattern pattern = Pattern.compile("\\{window\\.cdc.*?;}");
             Matcher matcher = pattern.matcher(content);
+
             if (matcher.find()) {
                 String foundString = matcher.group();
                 String replacementString = "{console.log(\"undetected chromedriver 1337!\")}";
@@ -162,38 +163,41 @@ public class Patcher {
                 int paddingLength = foundString.length() - replacementString.length();
                 target.append(" ".repeat(Math.max(0, paddingLength)));
                 String newContent = content.replace(foundString, target.toString());
-                file.setLength(0);
-                file.seek(0);
-                file.write(newContent.getBytes(StandardCharsets.ISO_8859_1));
-
+                outputFile.setLength(0);
+                outputFile.write(newContent.getBytes(StandardCharsets.ISO_8859_1));
                 return true;
             }
         } catch (IOException ex) {
             throw new RuntimeException("Failed to patch: " + ex.getMessage());
         }
-
         return false;
-    }
-
-    private boolean isPatched() {
-        File patchedExe = new File(saveLocation.toFile(), (version + "_" + exeName + (this.os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")));
-        return patchedExe.exists();
     }
 
     public Patcher() {
         this(null);
     }
 
+    private void checkExecutable(File file) {
+        if (file.setExecutable(true)) {
+            System.out.println("Made {" + file + "} executable.");
+        }
+    }
+
     public Patcher(String downloadUrl) {
         this.os = PatcherUtil.determineOS();
         this.version = PatcherUtil.getInstalledChromeVersion();
-        this.saveLocation = PatcherUtil.generatePath();
-        System.out.println("Checking if Executable is patched...");
-        File patchedExe = new File(saveLocation.toFile(), (version + "_" + exeName));
+        Path saveLocation = PatcherUtil.generatePath();
+        this.outputPath = Paths.get(saveLocation +
+                FileSystems.getDefault().getSeparator() +
+                exeName.replaceFirst("%", version.toString()) +
+                (os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")
+        );
 
-        // this doesn't work.
-        if (patchedExe.exists()) {
-            System.out.println("Executable patched: " + patchedExe.getPath());
+        System.out.println("Checking if Executable is patched...");
+
+        if (outputPath.toFile().exists()) {
+            System.out.println("Patched File exists..");
+            checkExecutable(outputPath.toFile());
             return;
         }
 
@@ -201,19 +205,21 @@ public class Patcher {
         Path zipPath = downloadChromedriver(downloadUrl);
         System.out.println("Archive downloaded.\nUnzipping Archive.");
 
-        driverPath = unzipChromedriver(zipPath);
+        this.inputPath = unzipChromedriver(zipPath);
 
-        if (driverPath == null) {
+        if (this.inputPath == null) {
             throw new RuntimeException("Couldn't find Chromedriver.");
         }
 
         System.out.println("File unzipped.\nAttempting to patch executable...");
 
-        if (attemptPatch(driverPath)) {
+        if (attemptPatch()) {
             System.out.println("Driver patched.");
         }
 
-        //System.out.println("Cleaning up.");
-        //cleanupFolder();
+        checkExecutable(outputPath.toFile());
+
+        System.out.println("Cleaning up.");
+        cleanupFolder();
     }
 }
