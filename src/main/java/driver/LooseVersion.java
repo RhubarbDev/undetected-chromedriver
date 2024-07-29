@@ -52,6 +52,10 @@ public class LooseVersion implements Comparable<LooseVersion> {
         return version.get(index);
     }
 
+    public int getParts() {
+        return version.size();
+    }
+
     @Override
     public String toString() {
         return this.versionString;

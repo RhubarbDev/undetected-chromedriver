@@ -1,6 +1,9 @@
 import driver.UndetectedDriver;
 import driver.UndetectedOptions;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+
 /**
  * The type Main.
  */
@@ -12,9 +15,9 @@ public class Main {
      * @param args the input arguments
      * @throws InterruptedException the interrupted exception
      */
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
         UndetectedOptions options = new UndetectedOptions(
-                false,
+                true,
                 true,
                 true,
                 true
@@ -22,11 +25,17 @@ public class Main {
 
         UndetectedDriver driver = UndetectedDriver.createDriver(options);
 
-        driver.get("https://bot.sannysoft.com");
+        try {
+            driver.get("https://bot.sannysoft.com");
+            String source = driver.getPageSource();
 
-        Thread.sleep(5000);
-
-        driver.close();
-        driver.quit();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter("page.html"))) {
+                writer.write(source);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        } finally {
+            driver.quit();
+        }
     }
 }

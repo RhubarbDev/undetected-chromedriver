@@ -24,11 +24,13 @@ public final class UserAgentUtil {
     public static String genUserAgent() {
         String versionName = versions[PatcherUtil.determineOS().ordinal() % versions.length];
         LooseVersion versionNumber = PatcherUtil.getInstalledChromeVersion();
-        String[] parts = versionNumber.toString().split("\\.");
 
-        if (parts.length > 0 && Integer.parseInt(parts[0]) >= 101) {
-            versionNumber = new LooseVersion(parts[0] + ".0".repeat(parts.length - 1));
-        }
+        try {
+            int majorVersion = (int)versionNumber.getPart(0);
+            if (majorVersion >= 101) {
+                versionNumber = new LooseVersion(majorVersion + ".0".repeat(versionNumber.getParts() - 1));
+            }
+        } catch (Exception ignore) { }
 
         return USER_AGENT.replaceFirst("%", versionName).replaceFirst("%", versionNumber.toString());
     }

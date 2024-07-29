@@ -162,7 +162,7 @@ public final class PatcherUtil {
         LooseVersion validVersion;
 
         try {
-            String majorVersion = version.toString().split("\\.")[0];
+            String majorVersion = version.getPart(0).toString();
             URL url = new URI(LEGACY_DRIVER_VERSION + "LATEST_RELEASE_" + majorVersion).toURL();
             validVersion = new LooseVersion(IOUtils.toString(url, StandardCharsets.UTF_8));
         } catch (Exception ex) {

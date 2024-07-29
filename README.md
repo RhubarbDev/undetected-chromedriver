@@ -12,15 +12,17 @@ However I haven't implemented all the featues found in that project.
 ## Usage
 
 ```java
+import driver.UndetectedOptions;
+import driver.UndetectedDriver;
+
 UndetectedOptions options = new UndetectedOptions();
 
-UndetectedDriver driver = new UndetectedDriver(options);
+UndetectedDriver driver = UndetectedDriver.createDriver(options);
 
 driver.get("https://google.com");
 
 System.out.println(driver.getTitle());
 
-driver.close();
 driver.quit();
 ```
 
