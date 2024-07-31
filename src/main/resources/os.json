@@ -1,0 +1,20 @@
+[
+  {
+    "os": "WINDOWS",
+    "path": "~/appdata/roaming/undetected_chromedriver",
+    "legacyFile": "chromedriver_win32.zip",
+    "command": ["cmd", "/c", "reg query \"HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon\" /v version"]
+  },
+  {
+    "os": "LINUX",
+    "path": "~/.local/share/undetected_chromedriver",
+    "legacyFile": "chromedriver_linux64.zip",
+    "command": ["/opt/google/chrome/chrome", "--version"]
+  },
+  {
+    "os": "MACOS",
+    "path": "~/Library/Application Support/undetected_chromedriver",
+    "legacyFile": "chromedriver_mac64.zip",
+    "command": ["/Application/Google Chrome.app/Contents/MacOS/Google Chrome", "--version"]
+  }
+]

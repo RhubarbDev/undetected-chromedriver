@@ -22,8 +22,10 @@ public final class UserAgentUtil {
      * @return the generated user agent.
      */
     public static String genUserAgent() {
-        String versionName = versions[PatcherUtil.determineOS().ordinal() % versions.length];
-        LooseVersion versionNumber = PatcherUtil.getInstalledChromeVersion();
+        OSUtils.OSInfo osInfo = OSUtils.getOS();
+
+        String versionName = versions[osInfo.os().ordinal() % versions.length];
+        LooseVersion versionNumber = OSUtils.getInstalledChromeVersion(osInfo.command());
 
         try {
             int majorVersion = (int)versionNumber.getPart(0);

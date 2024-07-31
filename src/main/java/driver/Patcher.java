@@ -1,9 +1,10 @@
 package driver;
 
-import utils.PatcherUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import utils.DownloadUtils;
+import utils.OSUtils;
 
 import java.io.*;
 import java.net.URI;
@@ -16,41 +17,24 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.Iterator;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.regex.Pattern;
+import java.util.Objects;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-/**
- * The type Patcher.
- */
 public class Patcher {
-    private static final Logger LOGGER = Logger.getLogger(Patcher.class.getName());
     private static final String EXECUTABLE = "undetected_%_chromedriver";
 
+    private static final OSUtils.OSInfo osInfo = OSUtils.getOS();
+    private LooseVersion version;
     private Path inputPath;
     private final Path outputPath;
 
-    private final PatcherUtil.OSType os;
-    private final LooseVersion version;
-
-    /**
-     * Gets Path to the patched driver.
-     *
-     * @return outputPath driver
-     */
     public Path getDriver() {
         return outputPath;
     }
 
-    /**
-     * Unzips the downloaded driver folder.
-     *
-     * @param zipFile the zip file
-     * @return the path to the Unzipped chromedriver folder
-     */
     public Path unzipChromedriver(Path zipFile) {
         String fileBaseName = FilenameUtils.getBaseName(zipFile.getFileName().toString());
         Path destination = Paths.get(zipFile.getParent().toString(), fileBaseName);
@@ -77,7 +61,7 @@ public class Patcher {
             throw new RuntimeException(ex.getMessage());
         }
 
-        String name = "chromedriver" + (os == PatcherUtil.OSType.WINDOWS ? ".exe" : "");
+        String name = "chromedriver" + (osInfo.os() == OSUtils.OS.WINDOWS ? ".exe" : "");
 
         Iterator<File> files = FileUtils.iterateFiles(destination.toFile(), null, true);
 
@@ -91,15 +75,9 @@ public class Patcher {
         return null;
     }
 
-    /**
-     * Downloads the chromedriver zip file from the url provided by getURL
-     *
-     * @param downloadUrl the url of the zip file
-     * @return the path of the downloaded file
-     */
-    public Path downloadChromedriver(String downloadUrl) {
+    private Path downloadChromeDriver(String downloadUrl) {
 
-        Path saveLocation = PatcherUtil.generatePath();
+        Path saveLocation = Paths.get(osInfo.path());
 
         // Check saveLocation exists, if not create it.
         try {
@@ -113,11 +91,7 @@ public class Patcher {
         }
 
         File file;
-        String name = version + ".zip";
-
-        if (downloadUrl == null) {
-            downloadUrl = PatcherUtil.getURL();
-        }
+        String name = this.version + ".zip";
 
         try {
             URL url = new URI(downloadUrl).toURL();
@@ -131,44 +105,53 @@ public class Patcher {
 
         return file.toPath();
     }
+    
+    public Patcher() {
+        this(DownloadUtils.getURL(osInfo, OSUtils.getInstalledChromeVersion(osInfo.command())));
+    }
 
-    /**
-     * Cleans the folder (see generatePath) leaving only the patched chromedriver
-     */
-    public void cleanupFolder() {
-        File[] files = PatcherUtil.generatePath().toFile().listFiles();
+    public Patcher(String downloadUrl) {
+        String line = null;
+        try {
+            ProcessBuilder builder = new ProcessBuilder(osInfo.command());
+            builder.directory(new File(System.getProperty("user.home")));
+            Process proc = builder.start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+            String read;
+            while ((read = reader.readLine()) != null) {
+                if (read.contains("Google Chrome") || Objects.requireNonNull(line).contains("version")) {
+                    line = read;
+                }
+            }
+            reader.close();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
 
-        if (files == null) {
-            LOGGER.log(Level.INFO, "Nothing to cleanup (probably).");
+        if (line == null) {
+            throw new RuntimeException("Couldn't find version.");
+        }
+
+        this.version = OSUtils.getInstalledChromeVersion(osInfo.command());
+
+        this.outputPath = Paths.get(
+                osInfo.path(),
+                FileSystems.getDefault().getSeparator(),
+                EXECUTABLE.replaceFirst("%", this.version.toString()),
+                (osInfo.os() == OSUtils.OS.WINDOWS ? ".exe" : "")
+        );
+
+        if (outputPath.toFile().exists()) {
+            outputPath.toFile().setExecutable(true);
             return;
         }
 
-        String patchedName = EXECUTABLE.replace("%", this.version.toString());
+        this.inputPath = unzipChromedriver(downloadChromeDriver(downloadUrl));
 
-        for (File file : files) {
-            try {
-                if (file.isDirectory()) {
-                    FileUtils.cleanDirectory(file);
-                    FileUtils.deleteDirectory(file);
-                } else {
-                    // ignore the most recent patched executable
-                    if (file.getName().equalsIgnoreCase(patchedName)) {
-                        continue;
-                    }
-                    FileUtils.delete(file);
-                }
-            } catch (IOException ex) {
-                LOGGER.log(Level.WARNING, ex.getMessage());
-            }
+        if (this.inputPath == null) {
+            throw new RuntimeException("Couldn't find Chromedriver.");
         }
-    }
 
-    /**
-     * Attempts to patch the downloaded chromedriver executable
-     *
-     * @return true if patch succeeded false otherwise
-     */
-    public boolean attemptPatch() {
         assert !outputPath.toFile().exists();
 
         try (RandomAccessFile inputFile = new RandomAccessFile(this.inputPath.toFile(), "r");
@@ -194,71 +177,34 @@ public class Patcher {
                 String newContent = content.replace(foundString, target.toString());
                 outputFile.setLength(0);
                 outputFile.write(newContent.getBytes(StandardCharsets.ISO_8859_1));
-                return true;
             }
         } catch (IOException ex) {
             throw new RuntimeException("Failed to patch: " + ex.getMessage());
         }
-        return false;
-    }
 
-    /**
-     * Instantiates a new Patcher.
-     */
-    public Patcher() {
-        this(null);
-    }
+        outputPath.toFile().setExecutable(true);
 
-    private void checkExecutable(File file) {
-        file.setExecutable(true);
-    }
+        File[] files = new File(osInfo.path()).listFiles();
 
-    /**
-     * Instantiates a new Patcher.
-     *
-     * @param downloadUrl custom download url - useful if google changes download location
-     */
-    public Patcher(String downloadUrl) {
-        this.os = PatcherUtil.determineOS();
-        this.version = PatcherUtil.getInstalledChromeVersion();
-        Path saveLocation = PatcherUtil.generatePath();
-        this.outputPath = Paths.get(saveLocation +
-                FileSystems.getDefault().getSeparator() +
-                EXECUTABLE.replaceFirst("%", version.toString()) +
-                (os == PatcherUtil.OSType.WINDOWS ? ".exe" : "")
-        );
-
-        LOGGER.log(Level.INFO, "Checking if executable is patched...");
-
-        if (outputPath.toFile().exists()) {
-            LOGGER.log(Level.INFO, "Patched file exists.");
-            checkExecutable(outputPath.toFile());
+        if (files == null) {
             return;
         }
 
-        LOGGER.log(Level.INFO, "Downloading Chromedriver...");
+        String patchedName = EXECUTABLE.replace("%", this.version.toString());
 
-        Path zipPath = downloadChromedriver(downloadUrl);
-
-        LOGGER.log(Level.INFO, "Archive downloaded.");
-        LOGGER.log(Level.INFO, "Unzipping Archive.");
-
-        this.inputPath = unzipChromedriver(zipPath);
-
-        if (this.inputPath == null) {
-            throw new RuntimeException("Couldn't find Chromedriver.");
+        for (File file : files) {
+            try {
+                if (file.isDirectory()) {
+                    FileUtils.cleanDirectory(file);
+                    FileUtils.deleteDirectory(file);
+                } else {
+                    // ignore the most recent patched executable
+                    if (file.getName().equalsIgnoreCase(patchedName)) {
+                        continue;
+                    }
+                    FileUtils.delete(file);
+                }
+            } catch (IOException ex) {}
         }
-
-        LOGGER.log(Level.INFO, "File Unzipped.");
-        LOGGER.log(Level.INFO, "Attempting to patch executable...");
-
-        if (attemptPatch()) {
-            LOGGER.log(Level.INFO, "Driver patched.");
-        }
-
-        checkExecutable(outputPath.toFile());
-
-        LOGGER.log(Level.INFO, "Cleaning up.");
-        cleanupFolder();
     }
 }

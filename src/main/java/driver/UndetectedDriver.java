@@ -12,9 +12,7 @@ public class UndetectedDriver extends ChromeDriver {
      *
      * @param options ChromeOptions passed to the driver.
      */
-    private UndetectedDriver(UndetectedOptions options) {
-        super(options);
-    }
+    private UndetectedDriver(UndetectedOptions options) { super(options); }
 
     /**
      * Create driver undetected driver.

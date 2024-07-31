@@ -1,6 +1,6 @@
 package driver;
 
-import utils.PatcherUtil;
+import utils.OSUtils;
 import utils.UserAgentUtil;
 import org.openqa.selenium.chrome.ChromeOptions;
 
@@ -10,6 +10,13 @@ import java.util.Collections;
  * The type Undetected options.
  */
 public class UndetectedOptions extends ChromeOptions {
+
+    private final boolean headless;
+
+    public boolean isHeadless() {
+        return headless;
+    }
+    
     /**
      * Instantiates a new Undetected options.
      */
@@ -72,6 +79,8 @@ public class UndetectedOptions extends ChromeOptions {
     ) {
         super();
 
+        this.headless = headless;
+
         this.addArguments("--disable-blink-features=AutomationControlled");
         this.addArguments("disable-infobars");
         this.addArguments("window-size=192,1080");
@@ -83,7 +92,7 @@ public class UndetectedOptions extends ChromeOptions {
             this.addArguments("user-agent=" + UserAgentUtil.genUserAgent());
 
             try {
-                int version = (Integer)PatcherUtil.getInstalledChromeVersion().getPart(0);
+                int  version = (Integer) OSUtils.getInstalledChromeVersion(OSUtils.getOS().command()).getPart(0);
                 if (version < 108) {
                     this.addArguments("--headless=chrome");
                 } else {
