@@ -17,7 +17,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.Iterator;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -111,27 +110,6 @@ public class Patcher {
     }
 
     public Patcher(String downloadUrl) {
-        String line = null;
-        try {
-            ProcessBuilder builder = new ProcessBuilder(osInfo.command());
-            builder.directory(new File(System.getProperty("user.home")));
-            Process proc = builder.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            String read;
-            while ((read = reader.readLine()) != null) {
-                if (read.contains("Google Chrome") || Objects.requireNonNull(line).contains("version")) {
-                    line = read;
-                }
-            }
-            reader.close();
-        } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
-        }
-
-        if (line == null) {
-            throw new RuntimeException("Couldn't find version.");
-        }
-
         this.version = OSUtils.getInstalledChromeVersion(osInfo.command());
 
         this.outputPath = Paths.get(
@@ -197,14 +175,10 @@ public class Patcher {
                 if (file.isDirectory()) {
                     FileUtils.cleanDirectory(file);
                     FileUtils.deleteDirectory(file);
-                } else {
-                    // ignore the most recent patched executable
-                    if (file.getName().equalsIgnoreCase(patchedName)) {
-                        continue;
-                    }
+                } else if (!file.getName().equalsIgnoreCase(patchedName)) {
                     FileUtils.delete(file);
                 }
-            } catch (IOException ex) {}
+            } catch (Exception ignore) { }
         }
     }
 }

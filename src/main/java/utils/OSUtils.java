@@ -5,7 +5,6 @@ import driver.LooseVersion;
 import org.openqa.selenium.json.TypeToken;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
@@ -75,25 +74,26 @@ public final class OSUtils {
             return version;
         }
 
-        String line = null;
+        Process proc;
         try {
-            ProcessBuilder builder = new ProcessBuilder(command);
-            builder.directory(new File(System.getProperty("user.home")));
-            Process proc = builder.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            String read;
-            while ((read = reader.readLine()) != null) {
-                if (read.contains("Google Chrome") || Objects.requireNonNull(line).contains("version")) {
-                    line = read;
-                }
-            }
-            reader.close();
+            proc = new ProcessBuilder(command).start();
         } catch (Exception ex) {
             throw new RuntimeException(ex.getMessage());
         }
 
-        if (line == null) {
-            throw new RuntimeException("Couldn't find version.");
+        String line = null;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+            String read;
+            while ((read = reader.readLine()) != null) {
+                if (read.contains("Google Chrome") || read.contains("version")) {
+                    line = read;
+                }
+            }
+            if (line == null) {
+                throw new RuntimeException("Couldn't find version.");
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException(ex.getMessage());
         }
 
         String[] items = line.split(" ");
@@ -101,7 +101,7 @@ public final class OSUtils {
             try {
                 version = new LooseVersion(item);
             } catch (Exception ignored) {
-
+                // do nothing.
             }
         }
 
