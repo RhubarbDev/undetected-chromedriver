@@ -1,7 +1,6 @@
 package driver;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +20,7 @@ public class LooseVersion implements Comparable<LooseVersion> {
      *
      * @param vString the version stored as a string.
      */
-    public LooseVersion(@NonNull String vString) {
+    public LooseVersion(@Nonnull String vString) {
         this.versionString = vString;
 
         Matcher matcher = COMPONENT_RE.matcher(versionString);
