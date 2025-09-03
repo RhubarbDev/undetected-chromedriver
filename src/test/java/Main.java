@@ -9,8 +9,7 @@ public class Main {
 
     public static void main(String[] args) {
         UndetectedOptions options = new UndetectedOptions(
-                true,
-                true,
+                false,
                 true,
                 true
         );
@@ -24,7 +23,7 @@ public class Main {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter("page.html"))) {
                 writer.write(Objects.requireNonNullElse(source, ":("));
             } catch (Exception ex) {
-                ex.printStackTrace();
+                System.err.println(ex.getMessage());
             }
         } finally {
             driver.quit();
